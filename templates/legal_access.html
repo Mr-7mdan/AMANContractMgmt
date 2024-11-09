@@ -1,0 +1,337 @@
+{% extends "base_clean.html" %}
+
+{% block head %}
+<!-- Quill CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<!-- Quill JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<!-- Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2" style="background: #0f203c; color: white;">
+            <h3 class="mb-0">Collaboration Request: {{ collaboration.title }}</h3>
+            {% if collaboration.status == 'open' %}
+            <button class="btn btn-outline-light btn-sm" onclick="markAsCompleted()">
+                <i class="fas fa-check"></i> Mark as Completed
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Collaboration Details -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Created By:</strong> {{ collaboration.created_by.name }}</p>
+                    <p><strong>Legal Office:</strong> {{ collaboration.office.name }}</p>
+                    <p><strong>Created At:</strong> {{ collaboration.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{{ 'warning' if collaboration.status == 'open' else 'success' }}">
+                            {{ collaboration.status|title }}
+                        </span>
+                    </p>
+                    {% if collaboration.contract %}
+                    <p><strong>Related Contract:</strong> {{ collaboration.contract.name }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5>Description</h5>
+                <p>{{ collaboration.description }}</p>
+            </div>
+
+            <!-- Response Form -->
+            {% if collaboration.status == 'open' %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>Your Response</h5>
+                    <form id="responseForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <div id="editor"></div>
+                            <input type="hidden" name="content" id="content">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Attachment (optional)</label>
+                            <input type="file" class="form-control" name="attachment">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            Send Response
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Timeline -->
+            <h5>Timeline</h5>
+            <div class="timeline">
+                {% for event in collaboration.events|sort(attribute='created_at', reverse=True) %}
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="event-header">
+                            <div>
+                                <strong>{{ event.representative.name if event.representative else event.created_by.name }}</strong>
+                                <small class="text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                        </div>
+                        <div class="event-body mt-2">
+                            {{ event.content|safe }}
+                            {% if event.stored_filename %}
+                            <div class="attachment mt-2">
+                                <i class="fas fa-paperclip"></i>
+                                <a href="{{ url_for('download_collaboration_file', event_id=event.id) }}" class="ms-1">
+                                    {{ event.original_filename }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this template for reply forms -->
+<template id="replyFormTemplate">
+    <div class="reply-form mt-3">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group mb-3">
+                <div class="reply-editor"></div>
+                <input type="hidden" name="content">
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label">Attachment (optional)</label>
+                <input type="file" class="form-control" name="attachment">
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    Send Reply
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="hideReplyForm(this)">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</template>
+
+<script>
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    placeholder: 'Type your response here...',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['clean']
+        ]
+    }
+});
+
+document.getElementById('responseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    
+    // Get content from Quill
+    document.getElementById('content').value = quill.root.innerHTML;
+    
+    // Create FormData
+    const formData = new FormData(this);
+    
+    // Disable button and show spinner
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    
+    // Send request
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            throw new Error(data.error || 'Error submitting response');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error submitting response: ' + error.message);
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
+    });
+});
+
+function markAsCompleted() {
+    if (confirm('Are you sure you want to mark this collaboration as completed?')) {
+        fetch(`/collaboration/${collaboration_id}/complete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error marking collaboration as completed');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error marking collaboration as completed');
+        });
+    }
+}
+
+// Initialize Quill for reply forms
+function initReplyQuill(container) {
+    return new Quill(container, {
+        theme: 'snow',
+        placeholder: 'Write your reply here...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['clean']
+            ]
+        }
+    });
+}
+
+// Show reply form
+function showReplyForm(button, eventId) {
+    // Hide any existing reply forms
+    document.querySelectorAll('.reply-form').forEach(form => {
+        form.remove();
+    });
+    
+    // Get the template
+    const template = document.getElementById('replyFormTemplate');
+    const clone = template.content.cloneNode(true);
+    
+    // Set up the form
+    const form = clone.querySelector('form');
+    form.action = `/collaboration/event/${eventId}/reply`;
+    
+    // Add form after the button's parent comment
+    const commentBody = button.closest('.event-body');
+    commentBody.appendChild(form);
+    
+    // Initialize Quill for reply
+    const replyQuill = initReplyQuill(form.querySelector('.reply-editor'));
+    
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const spinner = submitBtn.querySelector('.spinner-border');
+        
+        // Get content from Quill
+        const content = replyQuill.root.innerHTML;
+        this.querySelector('input[name="content"]').value = content;
+        
+        // Create FormData
+        const formData = new FormData(this);
+        
+        // Disable button and show spinner
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Send request
+        fetch(this.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                throw new Error(data.error || 'Error submitting reply');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error submitting reply: ' + error.message);
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    });
+}
+
+function hideReplyForm(button) {
+    const form = button.closest('.reply-form');
+    if (form) {
+        form.remove();
+    }
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #0f203c;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #0f203c;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    border-left: 3px solid #0f203c;
+}
+
+.attachment {
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    display: inline-block;
+}
+
+.attachment i {
+    color: #0f203c;
+}
+
+.attachment a {
+    color: #0f203c;
+    text-decoration: none;
+}
+
+.attachment a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %} 

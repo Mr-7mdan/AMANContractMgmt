@@ -1,0 +1,150 @@
+Setting Up IIS for Aman Contracts System
+======================================
+
+Prerequisites:
+-------------
+1. Windows Server 2016 or later
+2. Python 3.9 or later installed
+3. IIS installed
+4. Administrator access
+
+Step 1: Install IIS Features
+---------------------------
+1. Open Server Manager
+2. Click "Add roles and features"
+3. Select "Web Server (IIS)"
+4. Under "Application Development", check:
+   - CGI
+   - URL Rewrite Module (download from Microsoft if not available)
+   - Application Initialization
+   - ISAPI Extensions
+   - ISAPI Filters
+
+Step 2: Install URL Rewrite Module
+--------------------------------
+1. Download URL Rewrite Module from:
+   https://www.iis.net/downloads/microsoft/url-rewrite
+2. Run the installer
+3. Follow installation wizard steps
+4. Restart IIS after installation
+
+Step 3: Configure Application Pool
+--------------------------------
+1. Open IIS Manager
+2. Expand server node
+3. Click "Application Pools"
+4. Click "Add Application Pool"
+5. Set the following:
+   - Name: "AmanContracts"
+   - .NET CLR version: "No Managed Code"
+   - Managed pipeline mode: "Integrated"
+6. Select the new pool and click "Advanced Settings"
+7. Set Identity to "Custom Account"
+8. Use an account with proper permissions
+
+Step 4: Create Website
+---------------------
+1. In IIS Manager, expand server
+2. Right-click "Sites"
+3. Click "Add Website"
+4. Configure:
+   - Site name: "AmanContracts"
+   - Physical path: "C:\aman_contracts"
+   - Application pool: "AmanContracts" (created in step 3)
+   - Binding: Choose appropriate port (default 80)
+
+Step 5: Configure Directory Permissions
+------------------------------------
+1. Open PowerShell as Administrator
+2. Run:
+   ```powershell
+   $acl = Get-Acl C:\aman_contracts
+   $rule = New-Object System.Security.AccessControl.FileSystemAccessRule("IIS_IUSRS", "Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
+   $acl.SetAccessRule($rule)
+   Set-Acl C:\aman_contracts $acl
+   ```
+
+Step 6: Configure FastCGI Settings
+--------------------------------
+1. In IIS Manager, select server node
+2. Double-click "FastCGI Settings"
+3. Click "Add Application"
+4. Set:
+   - Full Path: "C:\aman_contracts\venv\Scripts\python.exe"
+   - Arguments: "C:\aman_contracts\venv\Lib\site-packages\wfastcgi.py"
+5. Click OK
+
+Step 7: Configure Web.config
+--------------------------
+1. Ensure web.config is in the site root (C:\aman_contracts)
+2. Verify paths in web.config match your installation:
+   - Python path
+   - wfastcgi.py path
+3. Check handler configuration:
+   ```xml
+   <handlers>
+       <add name="Python FastCGI"
+            path="*"
+            verb="*"
+            modules="FastCgiModule"
+            scriptProcessor="C:\aman_contracts\venv\Scripts\python.exe|C:\aman_contracts\venv\Lib\site-packages\wfastcgi.py"
+            resourceType="Unspecified"
+            requireAccess="Script" />
+   </handlers>
+   ```
+
+Step 8: Install Python Dependencies
+--------------------------------
+1. Open PowerShell
+2. Navigate to C:\aman_contracts
+3. Run:
+   ```powershell
+   .\venv\Scripts\Activate.ps1
+   pip install wfastcgi
+   wfastcgi-enable
+   ```
+
+Step 9: Configure Application Settings
+-----------------------------------
+1. In IIS Manager, select your site
+2. Double-click "Application Settings"
+3. Add:
+   - PYTHONPATH: "C:\aman_contracts"
+   - WSGI_HANDLER: "app.app"
+   - WSGI_LOG: "C:\aman_contracts\logs\wsgi.log"
+
+Step 10: Verify Installation
+--------------------------
+1. Open browser
+2. Navigate to http://localhost
+3. Check logs in C:\aman_contracts\logs if issues occur
+
+Troubleshooting
+--------------
+1. Check permissions:
+   - IIS_IUSRS has modify access to site directory
+   - Application Pool identity has necessary permissions
+
+2. Check logs:
+   - IIS logs: C:\inetpub\logs\LogFiles
+   - Application logs: C:\aman_contracts\logs
+   - WSGI logs: C:\aman_contracts\logs\wsgi.log
+
+3. Common Issues:
+   - 500 Error: Check WSGI configuration and Python paths
+   - 404 Error: Check URL rewrite rules and handlers
+   - Permission errors: Verify directory permissions
+
+4. Restart Steps:
+   - IIS: iisreset
+   - Application Pool: Recycle in IIS Manager
+   - Windows Service: Restart-Service W3SVC
+
+Security Notes
+-------------
+1. Always use HTTPS in production
+2. Keep Python and all packages updated
+3. Use strong file permissions
+4. Enable Windows Firewall
+5. Regular security updates
+6. Monitor logs for suspicious activity 

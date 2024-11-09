@@ -1,0 +1,603 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>System Settings</h2>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Email Configuration</h4>
+            <input type="hidden" id="selectedProvider" value="{{ settings.mail_provider }}">
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Vertical Tabs -->
+                <div class="col-md-3 border-end">
+                    <div class="nav flex-column nav-pills" role="tablist">
+                        {% for provider_id, provider_name in settings.MAIL_PROVIDERS.items() %}
+                        <div class="nav-link d-flex justify-content-between align-items-center">
+                            <button class="text-start border-0 bg-transparent p-0" 
+                                    data-bs-toggle="pill" 
+                                    data-bs-target="#{{ provider_id }}" 
+                                    type="button" 
+                                    role="tab"
+                                    style="flex: 1;">
+                                <i class="bi {{ 'bi-microsoft' if provider_id == 'outlook' 
+                                            else 'bi-google' if provider_id == 'gmail' 
+                                            else 'bi-envelope' }} me-2"></i>
+                                {{ provider_name }}
+                            </button>
+                            <div class="form-check form-switch ms-3" onclick="event.stopPropagation();">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="{{ provider_id }}_enabled"
+                                       name="enabled_provider"
+                                       value="{{ provider_id }}"
+                                       {% if settings.mail_provider_enabled == provider_id %}checked{% endif %}
+                                       onchange="toggleProvider('{{ provider_id }}')">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="col-md-9">
+                    <div class="tab-content">
+                        <!-- Microsoft 365 Tab -->
+                        <div class="tab-pane fade {% if settings.mail_provider == 'outlook' %}show active{% endif %}" id="outlook" role="tabpanel">
+                            <h5 class="mb-4">Microsoft 365 Configuration</h5>
+                            
+                            <form method="POST" action="{{ url_for('save_email_settings') }}" class="provider-form">
+                                <input type="hidden" name="mail_provider" value="outlook">
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Email Address</label>
+                                            <input type="email" class="form-control" name="outlook_username" 
+                                                   value="{{ settings.outlook_username }}"
+                                                   placeholder="your@organization.com">
+                                            <small class="text-muted">Your Microsoft 365 email address</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Password</label>
+                                            <input type="password" class="form-control" name="outlook_password" 
+                                                   placeholder="Enter your password">
+                                            <small class="text-muted">Your Microsoft 365 password or app password</small>
+                                        </div>
+                                        <!-- Outlook-specific actions -->
+                                        <div class="text-end mt-4">
+                                            <button type="button" class="btn btn-secondary me-2" 
+                                                    onclick="testEmailConnection('outlook')"
+                                                    data-provider="outlook">
+                                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                                Test Connection
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info">
+                                            <h6 class="alert-heading">Microsoft 365 Setup Instructions:</h6>
+                                            <ol class="mb-0">
+                                                <li>Enable SMTP AUTH:
+                                                    <ul>
+                                                        <li>Admin: Go to <a href="https://admin.microsoft.com/Adminportal/Home#/Settings/Services/:/Settings/L1/O365SmtpAuth" target="_blank">Microsoft 365 Admin Center</a></li>
+                                                        <li>Enable "Authenticated SMTP"</li>
+                                                        <li>Wait up to 24 hours for activation</li>
+                                                    </ul>
+                                                </li>
+                                                <li>If using Multi-Factor Authentication (MFA):
+                                                    <ul>
+                                                        <li>Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank">Security Info</a></li>
+                                                        <li>Click "Add sign-in method"</li>
+                                                        <li>Choose "App passwords"</li>
+                                                        <li>Use the generated app password here</li>
+                                                    </ul>
+                                                </li>
+                                                <li>Account Requirements:
+                                                    <ul>
+                                                        <li>Must have "Send As" permissions</li>
+                                                        <li>SMTP client submission enabled</li>
+                                                        <li>Basic authentication allowed for SMTP</li>
+                                                    </ul>
+                                                </li>
+                                            </ol>
+                                            <hr>
+                                            <p class="mb-0"><small>Need help? Visit <a href="https://docs.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365" target="_blank">Microsoft's Setup Guide</a></small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Gmail Tab -->
+                        <div class="tab-pane fade {% if settings.mail_provider == 'gmail' %}show active{% endif %}" id="gmail" role="tabpanel">
+                            <h5 class="mb-4">Gmail Configuration</h5>
+                            
+                            <form method="POST" action="{{ url_for('save_email_settings') }}" class="provider-form">
+                                <input type="hidden" name="mail_provider" value="gmail">
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Gmail Address</label>
+                                            <input type="email" class="form-control" name="gmail_username" 
+                                                   value="{{ settings.gmail_username }}"
+                                                   placeholder="your@gmail.com">
+                                            <small class="text-muted">Must be a Gmail address</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">App Password</label>
+                                            <input type="password" class="form-control" name="gmail_password" 
+                                                   placeholder="Enter your 16-character app password">
+                                            <small class="text-muted">16-character app password from Google Account</small>
+                                        </div>
+                                        <!-- Gmail-specific actions -->
+                                        <div class="text-end mt-4">
+                                            <button type="button" class="btn btn-secondary me-2" 
+                                                    onclick="testEmailConnection('gmail')"
+                                                    data-provider="gmail">
+                                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                                Test Connection
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info">
+                                            <h6 class="alert-heading">Gmail Setup Instructions:</h6>
+                                            <ol class="mb-0">
+                                                <li>Enable 2-Step Verification (Required):
+                                                    <ul>
+                                                        <li>Go to <a href="https://myaccount.google.com/security" target="_blank">Google Account Security</a></li>
+                                                        <li>Click "2-Step Verification"</li>
+                                                        <li>Follow the setup process</li>
+                                                    </ul>
+                                                </li>
+                                                <li>Generate App Password:
+                                                    <ul>
+                                                        <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank">App Passwords</a></li>
+                                                        <li>Select app: "Mail"</li>
+                                                        <li>Select device: "Other (Custom name)"</li>
+                                                        <li>Enter name: "Aman Contracts"</li>
+                                                        <li>Copy the 16-character password</li>
+                                                    </ul>
+                                                </li>
+                                                <li>Important Notes:
+                                                    <ul>
+                                                        <li>Never use your regular Gmail password</li>
+                                                        <li>App passwords are 16 characters long</li>
+                                                        <li>Each app password can only be viewed once</li>
+                                                    </ul>
+                                                </li>
+                                            </ol>
+                                            <hr>
+                                            <p class="mb-0"><small>Need help? Visit <a href="https://support.google.com/accounts/answer/185833" target="_blank">Google's App Passwords Guide</a></small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Exchange Tab -->
+                        <div class="tab-pane fade {% if settings.mail_provider == 'exchange' %}show active{% endif %}" id="exchange" role="tabpanel">
+                            <h5 class="mb-4">Exchange Server Configuration</h5>
+                            
+                            <form method="POST" action="{{ url_for('save_email_settings') }}" class="provider-form">
+                                <input type="hidden" name="mail_provider" value="exchange">
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Exchange Server URL</label>
+                                            <input type="text" class="form-control" name="exchange_server" 
+                                                   value="{{ settings.exchange_server }}"
+                                                   placeholder="mail.yourdomain.com">
+                                            <small class="text-muted">Enter server URL without 'https://' or port</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Email Address</label>
+                                            <input type="email" class="form-control" name="exchange_username" 
+                                                   value="{{ settings.exchange_username }}"
+                                                   placeholder="your@domain.com">
+                                            <small class="text-muted">Your Exchange email address</small>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Password</label>
+                                            <input type="password" class="form-control" name="exchange_password" 
+                                                   placeholder="Enter your password">
+                                            <small class="text-muted">Your Exchange password</small>
+                                        </div>
+                                        <!-- Exchange-specific actions -->
+                                        <div class="text-end mt-4">
+                                            <button type="button" class="btn btn-secondary me-2" 
+                                                    onclick="testEmailConnection('exchange')"
+                                                    data-provider="exchange">
+                                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                                Test Connection
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info">
+                                            <h6 class="alert-heading">Exchange Server Setup Instructions:</h6>
+                                            <ol class="mb-0">
+                                                <li>Server Information Required:
+                                                    <ul>
+                                                        <li>Exchange Server URL (e.g., mail.company.com)</li>
+                                                        <li>SMTP port (usually 587)</li>
+                                                        <li>Authentication method used</li>
+                                                    </ul>
+                                                </li>
+                                                <li>Account Requirements:
+                                                    <ul>
+                                                        <li>Valid Exchange email account</li>
+                                                        <li>Proper send permissions</li>
+                                                        <li>Network access to Exchange server</li>
+                                                    </ul>
+                                                </li>
+                                                <li>Common Exchange Settings:
+                                                    <ul>
+                                                        <li>TLS encryption enabled</li>
+                                                        <li>Basic authentication supported</li>
+                                                        <li>SMTP service enabled</li>
+                                                    </ul>
+                                                </li>
+                                            </ol>
+                                            <hr>
+                                            <p class="mb-0"><small>Contact your IT administrator for specific server settings and requirements.</small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="testEmailResult" class="d-none"></div>
+</div>
+
+<script>
+// Function to load provider settings
+function loadProviderSettings(provider) {
+    console.log(`Loading settings for provider: ${provider}`);
+    
+    // Update hidden provider field if it exists
+    const selectedProviderInput = document.getElementById('selectedProvider');
+    if (selectedProviderInput) {
+        selectedProviderInput.value = provider;
+    }
+    
+    // Load provider-specific settings
+    fetch(`/settings/get_provider_config?provider=${provider}`)
+        .then(response => response.json())
+        .then(settings => {
+            console.log(`Received settings for ${provider}:`, settings);
+            
+            // Update email/username field
+            const emailField = document.querySelector(`input[name="${provider}_username"]`);
+            if (emailField) {
+                emailField.value = settings[`${provider}_username`] || '';
+                console.log(`Setting ${provider}_username to:`, settings[`${provider}_username`]);
+            }
+            
+            // Provider-specific fields
+            if (provider === 'exchange') {
+                // Exchange server field
+                const serverField = document.querySelector('input[name="exchange_server"]');
+                if (serverField) {
+                    serverField.value = settings.exchange_server || '';
+                }
+            }
+            
+            // Update notification emails field if it exists
+            const notificationEmailsField = document.querySelector('input[name="notification_emails"]');
+            if (notificationEmailsField && settings.notification_emails) {
+                notificationEmailsField.value = settings.notification_emails;
+            }
+            
+            // Update enabled/disabled state
+            document.querySelectorAll('input[name="enabled_provider"]').forEach(checkbox => {
+                checkbox.checked = checkbox.value === settings.mail_provider_enabled;
+            });
+            
+            // Update notification toggles if they exist
+            const expiryToggle = document.querySelector('input[name="expiry_notifications_enabled"]');
+            if (expiryToggle) {
+                expiryToggle.checked = settings.expiry_notifications_enabled === 'true';
+            }
+            
+            const periodicToggle = document.querySelector('input[name="periodic_notifications_enabled"]');
+            if (periodicToggle) {
+                periodicToggle.checked = settings.periodic_notifications_enabled === 'true';
+            }
+            
+            // Update technical details
+            updateTechnicalDetails(provider, settings);
+            
+            // Debug log to verify field updates
+            console.log(`Updated fields for ${provider}:`, {
+                username: settings[`${provider}_username`],
+                server: settings[`${provider}_server`],
+                enabled: settings.mail_provider_enabled
+            });
+        })
+        .catch(error => {
+            console.error('Error loading provider settings:', error);
+            showFeedback(`Error loading settings: ${error.message}`, 'danger');
+        });
+}
+
+// Add this helper function to update technical details
+function updateTechnicalDetails(provider, settings) {
+    const serverDetails = {
+        'outlook': {
+            server: settings.outlook_server || 'smtp.office365.com',
+            port: settings.outlook_port || '587',
+            security: 'TLS',
+            auth: 'Modern Auth / OAuth2'
+        },
+        'gmail': {
+            server: settings.gmail_server || 'smtp.gmail.com',
+            port: settings.gmail_port || '587',
+            security: 'TLS',
+            auth: 'OAuth2'
+        },
+        'exchange': {
+            server: settings.exchange_server || 'Custom Server',
+            port: settings.exchange_port || '587',
+            security: 'TLS',
+            auth: 'Basic Auth'
+        }
+    };
+
+    const details = serverDetails[provider];
+    if (details) {
+        const detailsElement = document.querySelector(`#${provider} .alert-secondary ul`);
+        if (detailsElement) {
+            detailsElement.innerHTML = `
+                <li>SMTP Server: ${details.server}</li>
+                <li>Port: ${details.port}</li>
+                <li>Security: ${details.security}</li>
+                <li>Authentication: ${details.auth}</li>
+                <li>Protocol: SMTP</li>
+            `;
+        }
+    }
+}
+
+// Function to toggle provider
+function toggleProvider(provider) {
+    fetch('/settings/toggle-provider', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider: provider })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update all provider checkboxes
+            document.querySelectorAll('input[name="enabled_provider"]').forEach(checkbox => {
+                checkbox.checked = checkbox.value === provider;
+            });
+            showFeedback(data.message, 'success');
+        } else {
+            showFeedback(data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling provider:', error);
+        showFeedback('Error updating provider settings', 'danger');
+    });
+}
+
+// Update provider settings when tab changes
+document.querySelectorAll('[data-bs-toggle="pill"]').forEach(pill => {
+    pill.addEventListener('shown.bs.tab', function (e) {
+        const provider = e.target.getAttribute('data-bs-target').replace('#', '');
+        console.log(`Tab changed to: ${provider}`);
+        loadProviderSettings(provider);
+    });
+});
+
+// Load initial provider settings
+document.addEventListener('DOMContentLoaded', function() {
+    // Add submit handlers to all provider forms
+    document.querySelectorAll('.provider-form').forEach(form => {
+        form.addEventListener('submit', handleProviderFormSubmit);
+    });
+    
+    // Get initial provider from hidden input or default to 'outlook'
+    const selectedProviderInput = document.getElementById('selectedProvider');
+    const initialProvider = selectedProviderInput ? selectedProviderInput.value : 'outlook';
+    console.log(`Initial load for provider: ${initialProvider}`);
+    loadProviderSettings(initialProvider);
+});
+
+// Function to show feedback message
+function showFeedback(message, type = 'success') {
+    // Create feedback container if it doesn't exist
+    let container = document.getElementById('feedback-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'feedback-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    container.appendChild(alert);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+    }, 5000);
+}
+
+// Handle test connection response
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.target.id === 'testEmailResult') {
+        const response = JSON.parse(evt.detail.xhr.response);
+        showFeedback(response.message, response.success ? 'success' : 'danger');
+    }
+});
+
+// Update the testEmailConnection function
+function testEmailConnection(provider) {
+    const form = document.querySelector(`#${provider} form`);
+    const testButton = document.querySelector(`#${provider} button[data-provider="${provider}"]`);
+    const spinner = testButton.querySelector('.spinner-border');
+    
+    // Show spinner
+    spinner.classList.remove('d-none');
+    testButton.disabled = true;
+    
+    // Create FormData from the form
+    const formData = new FormData();
+    formData.append('mail_provider', provider);
+    
+    // Send test request
+    fetch('/settings/test-email', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Parse the response to show feedback
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const message = tempDiv.textContent.trim();
+        const success = tempDiv.querySelector('.alert-success') !== null;
+        
+        showFeedback(message || 'Test email sent. Please check your inbox.', success ? 'success' : 'danger');
+    })
+    .catch(error => {
+        console.error('Error testing connection:', error);
+        showFeedback('Error testing connection: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        // Hide spinner and re-enable button
+        spinner.classList.add('d-none');
+        testButton.disabled = false;
+    });
+}
+
+// Add this function to handle form submission
+function handleProviderFormSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const provider = form.querySelector('input[name="mail_provider"]').value;
+    
+    // Create FormData from the form
+    const formData = new FormData(form);
+    
+    // Show loading state
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    submitButton.disabled = true;
+    
+    // Send the form data
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        showFeedback(`${provider.charAt(0).toUpperCase() + provider.slice(1)} settings saved successfully`, 'success');
+        
+        // Reload provider settings to update the UI
+        loadProviderSettings(provider);
+    })
+    .catch(error => {
+        console.error('Error saving settings:', error);
+        showFeedback(`Error saving ${provider} settings: ${error.message}`, 'danger');
+    })
+    .finally(() => {
+        // Restore button state
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    });
+}
+</script>
+
+<style>
+/* Custom styles for vertical tabs */
+.nav-pills .nav-link {
+    border-radius: 0;
+    padding: 1rem;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: rgba(15, 32, 60, 0.1);
+    color: #0f203c;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #0f203c;
+    color: white !important;
+}
+
+.nav-pills .nav-link.active:hover {
+    background-color: #0f203c;
+    color: white !important;
+}
+
+.tab-content {
+    padding: 20px;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 4px;
+}
+
+.alert-secondary {
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+}
+
+/* List styling */
+.alert ul {
+    padding-left: 20px;
+}
+
+.alert ul li {
+    margin-bottom: 5px;
+}
+
+/* Link styling */
+.alert a {
+    color: #0f203c;
+    text-decoration: underline;
+}
+
+.alert a:hover {
+    color: #1a3156;
+}
+</style>
+{% endblock %} 

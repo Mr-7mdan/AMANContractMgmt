@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aman Legal Collaboration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            padding-top: 70px;
+        }
+        .navbar {
+            background-color: #0f203c !important;
+            height: 70px;
+        }
+        .navbar-brand {
+            color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+        }
+        .navbar-brand:hover {
+            opacity: 0.9;
+        }
+        .navbar-brand img {
+            height: 40px;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <img src="https://www.aman.ps/assets/images/white-logo.svg" alt="Aman Logo">
+                <span>Legal Collaboration Portal</span>
+            </a>
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

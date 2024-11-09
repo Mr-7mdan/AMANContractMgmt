@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">{{ title }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="userForm">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" name="name" 
+                           value="{{ user.name if user else '' }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="username" id="username"
+                               value="{{ user.username if user else '' }}" required>
+                        <span class="input-group-text" id="username-status">
+                            <i class="fas fa-check text-success d-none" id="username-valid"></i>
+                            <i class="fas fa-times text-danger d-none" id="username-invalid"></i>
+                        </span>
+                    </div>
+                    <div class="invalid-feedback" id="username-feedback"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" name="email" 
+                           value="{{ user.email if user else '' }}" required>
+                    <small class="text-muted">This email will be used for notifications and password setup</small>
+                </div>
+                <div class="form-group mb-3">
+                    <label for="user_type" class="form-label">User Type</label>
+                    <select class="form-select" id="user_type" name="user_type" required>
+                        {% for value, label in user_types %}
+                            <option value="{{ value }}" {% if user and user.user_type == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="send_password_email" name="send_password_email" 
+                               {% if not mail_configured %}disabled{% endif %}>
+                        <label class="form-check-label" for="send_password_email">
+                            Let user set their own password
+                            {% if not mail_configured %}
+                            <small class="text-danger">
+                                (Email provider not configured. Please configure email settings first)
+                            </small>
+                            {% endif %}
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3" id="passwordField">
+                    <label class="form-label">Password {{ '(leave blank to keep current)' if user else '' }}</label>
+                    <input type="password" class="form-control" name="password" id="password"
+                           {{ 'required' if not user else '' }}>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('users') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        {{ 'Update' if user else 'Create' }} User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const usernameInput = document.getElementById('username');
+    const usernameValid = document.getElementById('username-valid');
+    const usernameInvalid = document.getElementById('username-invalid');
+    const usernameFeedback = document.getElementById('username-feedback');
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordInput = document.getElementById('password');
+    const sendPasswordEmail = document.getElementById('send_password_email');
+    
+    let usernameIsValid = false;
+    
+    // Handle username validation
+    function checkUsername() {
+        const username = usernameInput.value.trim();
+        if (!username) return;
+        
+        fetch(`/check-username?username=${encodeURIComponent(username)}`)
+            .then(response => response.json())
+            .then(data => {
+                usernameValid.classList.toggle('d-none', !data.available);
+                usernameInvalid.classList.toggle('d-none', data.available);
+                usernameFeedback.textContent = data.available ? '' : 'This username is already taken';
+                usernameIsValid = data.available;
+                submitBtn.disabled = !usernameIsValid;
+            });
+    }
+    
+    usernameInput.addEventListener('blur', checkUsername);
+    usernameInput.addEventListener('input', () => {
+        usernameValid.classList.add('d-none');
+        usernameInvalid.classList.add('d-none');
+        usernameFeedback.textContent = '';
+    });
+    
+    if (sendPasswordEmail) {
+        sendPasswordEmail.addEventListener('change', function() {
+            if (this.checked) {
+                passwordInput.value = '';
+                passwordInput.disabled = true;
+            } else {
+                passwordInput.disabled = false;
+            }
+        });
+    }
+    
+    // Form submission
+    document.getElementById('userForm').addEventListener('submit', function(e) {
+        if (!usernameIsValid) {
+            e.preventDefault();
+            alert('Please choose a different username');
+            return;
+        }
+        
+        // Show spinner and disable button
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.spinner-border').classList.remove('d-none');
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,875 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- Quill CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<!-- Quill JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<!-- Make sure these are included in the head section -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Collaboration Details -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #0f203c;">
+            <h4 class="mb-0">
+                {% if collaboration.contract %}
+                <span class="badge bg-info me-2">Contract</span>
+                {% else %}
+                <span class="badge bg-secondary me-2">Lead</span>
+                {% endif %}
+                {{ collaboration.title }}
+            </h4>
+            <div>
+                {% if collaboration.status == 'open' %}
+                <button class="btn btn-success btn-sm" onclick="markAsCompleted()">
+                    <i class="fas fa-check"></i> Mark as Completed
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Created By:</strong> {{ collaboration.created_by.name }}</p>
+                    <p><strong>Legal Office:</strong> {{ collaboration.office.name }}</p>
+                    <p><strong>Created At:</strong> {{ collaboration.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Status:</strong> 
+                        {% if collaboration.status == 'open' %}
+                        <span class="badge bg-warning">Open</span>
+                        {% elif collaboration.status == 'completed' %}
+                        <span class="badge bg-success">Completed</span>
+                        {% else %}
+                        <span class="badge bg-danger">Cancelled</span>
+                        {% endif %}
+                    </p>
+                    {% if collaboration.contract %}
+                    <p><strong>Contract:</strong> 
+                        <a href="{{ url_for('view_contract', contract_id=collaboration.contract.id) }}">
+                            {{ collaboration.contract.name }}
+                        </a>
+                    </p>
+                    {% endif %}
+                    <p><strong>Last Update:</strong> {{ collaboration.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h5>Description</h5>
+                <p>{{ collaboration.description }}</p>
+                {% if collaboration.stored_filename %}
+                <div class="attachment mt-2">
+                    <i class="fas fa-paperclip"></i>
+                    <a href="{{ url_for('download_collaboration_file', event_id=collaboration.id) }}" class="ms-1">
+                        {{ collaboration.original_filename }}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Representatives Section -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #0f203c;">
+            <h4 class="mb-0">Legal Representatives</h4>
+            <button type="button" class="btn btn-outline-primary btn-sm" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#selectRepresentativesModal">
+                <i class="fas fa-plus"></i> Add Representatives
+            </button>
+        </div>
+        <div class="card-body">
+            {% include '_collaboration_assignments.html' %}
+        </div>
+    </div>
+
+    <!-- Discussion Section -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #0f203c;">
+            <h4 class="mb-0">Discussion</h4>
+        </div>
+        <div class="card-body">
+            <!-- Add Email Details Modal -->
+            <div class="modal fade" id="emailDetailsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Email Notification Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="recipients-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rich Text Editor for New Comments -->
+            <form id="commentForm" action="{{ url_for('add_comment', collab_id=collaboration.id) }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group mb-3">
+                    <label for="content" class="form-label">Add Comment</label>
+                    <!-- Replace TinyMCE with Quill -->
+                    <div id="editor"></div>
+                    <input type="hidden" name="content" id="hiddenContent">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="attachment" class="form-label">Attachment (optional)</label>
+                    <input type="file" class="form-control" id="attachment" name="attachment">
+                    <small class="text-muted">Allowed file types: PDF, Word (DOC/DOCX), Excel (XLS/XLSX)</small>
+                </div>
+                
+                <div class="text-start">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        Send Response
+                    </button>
+                </div>
+            </form>
+
+            <!-- Timeline of Events -->
+            <div class="timeline">
+                {% for event in collaboration.events|sort(attribute='created_at', reverse=True) %}
+                    {% if not event.parent_id %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="event-header">
+                                <div>
+                                    <strong>{{ event.representative.name if event.representative else event.created_by.name }}</strong>
+                                    {% if event.event_type == 'comment' and event.id in pending_notifications %}
+                                    <span class="badge bg-info me-2" title="Email will be sent in 2 minutes">
+                                        <i class="fas fa-clock"></i> Pending
+                                    </span>
+                                    {% endif %}
+                                    <small class="text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            <div class="event-body mt-2">
+                                {{ event.content|safe }}
+                                {% if event.stored_filename %}
+                                <div class="attachment mt-2">
+                                    <i class="fas fa-paperclip"></i>
+                                    <a href="{{ url_for('download_collaboration_file', event_id=event.id) }}" class="ms-1">
+                                        {{ event.original_filename }}
+                                    </a>
+                                </div>
+                                {% endif %}
+
+                                <!-- Show replies -->
+                                {% for reply in event.replies %}
+                                <div class="reply mt-3 ms-4">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ reply.representative.name if reply.representative else reply.created_by.name }}</strong>
+                                            <small class="text-muted">{{ reply.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        {{ reply.content|safe }}
+                                        {% if reply.stored_filename %}
+                                        <div class="attachment mt-2">
+                                            <i class="fas fa-paperclip"></i>
+                                            <a href="{{ url_for('download_collaboration_file', event_id=reply.id) }}" class="ms-1">
+                                                {{ reply.original_filename }}
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+
+                                <!-- Only show reply button for parent comments -->
+                                {% if not event.parent_id %}
+                                <div class="mt-2">
+                                    <button class="btn btn-link btn-sm p-0" onclick="showReplyForm(this, '{{ event.id }}')">
+                                        <i class="fas fa-reply"></i> Reply
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    height: 100%;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding-left: 50px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 15px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 3px;
+}
+
+.timeline-content {
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+    /* Enhanced gradient border with more visible accent color */
+    border: 1px solid transparent;
+    background-image: 
+        linear-gradient(#ffffff, #ffffff), 
+        linear-gradient(145deg, rgba(15, 32, 60, 0.1), rgba(15, 32, 60, 0.2));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    /* Subtle shadow */
+    box-shadow: 0 2px 12px rgba(15, 32, 60, 0.05);
+    transition: all 0.3s ease;
+}
+
+/* Hover effect with more pronounced gradient */
+.timeline-content:hover {
+    transform: translateY(-2px);
+    background-image: 
+        linear-gradient(#ffffff, #ffffff), 
+        linear-gradient(145deg, rgba(15, 32, 60, 0.15), rgba(15, 32, 60, 0.25));
+    box-shadow: 0 4px 15px rgba(15, 32, 60, 0.08);
+}
+
+/* Header section of comment */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.timeline-header .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.timeline-header .user-avatar {
+    width: 32px;
+    height: 32px;
+    background: #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.timeline-header .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Comment content */
+.comment-content {
+    color: #495057;
+    line-height: 1.6;
+    margin: 12px 0;
+}
+
+/* Attachment section */
+.attachment {
+    margin-top: 15px;
+    padding: 10px;
+    background: linear-gradient(145deg, rgba(15, 32, 60, 0.03), rgba(15, 32, 60, 0.08));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attachment i {
+    color: #6c757d;
+}
+
+.attachment a {
+    color: #0d6efd;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+
+.attachment a:hover {
+    text-decoration: underline;
+}
+
+/* Status badges */
+.badge.bg-info {
+    background-color: #cfe2ff !important;
+    color: #084298;
+    font-weight: normal;
+    padding: 5px 10px;
+    border-radius: 12px;
+}
+
+/* Edit mode styles */
+.comment-edit {
+    margin-top: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.comment-edit .ql-toolbar {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    border-color: #dee2e6;
+}
+
+.comment-edit .ql-container {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-color: #dee2e6;
+}
+
+.edit-buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Animation for status changes */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.timeline-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.reply-container {
+    position: relative;
+    background: linear-gradient(145deg, rgba(15, 32, 60, 0.02), rgba(15, 32, 60, 0.05));
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.reply-container::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, rgba(15, 32, 60, 0.1), rgba(15, 32, 60, 0.05));
+    border-radius: 2px;
+}
+
+.reply-item {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+
+.reply-content {
+    color: #333;
+}
+
+.replies {
+    border-left-color: rgba(0, 123, 255, 0.2) !important;
+}
+
+blockquote {
+    margin: 0 0 1em;
+    padding-left: 1em;
+    border-left: 3px solid #ccc;
+    color: #666;
+}
+</style>
+
+<!-- Add this template for new comments -->
+<template id="commentTemplate">
+    <div class="timeline-item">
+        <div class="timeline-marker"></div>
+        <div class="timeline-content">
+            <div class="event-header">
+                <strong class="author-name"></strong>
+                <small class="text-muted created-at"></small>
+            </div>
+            <div class="event-body mt-2">
+                <div class="comment">
+                    <div class="content"></div>
+                    <div class="attachment-container mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Update the reply form template -->
+<template id="replyFormTemplate">
+    <form class="reply-form mt-3">
+        <div class="form-group mb-3">
+            <div class="reply-editor"></div>
+            <input type="hidden" name="content">
+        </div>
+        <!-- Add file attachment input -->
+        <div class="form-group mb-3">
+            <label for="attachment" class="form-label">Attachment (optional)</label>
+            <input type="file" class="form-control" name="attachment">
+            <small class="text-muted">Allowed file types: PDF, Word (DOC/DOCX), Excel (XLS/XLSX)</small>
+        </div>
+        <div class="text-end">
+            <button type="button" class="btn btn-secondary btn-sm me-2" onclick="hideReplyForm(this)">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="submitReply(this)">
+                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                Reply
+            </button>
+        </div>
+    </form>
+</template>
+
+<!-- Update the JavaScript for handling replies -->
+<script>
+// Initialize Quill for main comment form
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'indent': '-1'}, { 'indent': '+1' }],
+            [{ 'direction': 'rtl' }],
+            [{ 'align': [] }],
+            ['clean']
+        ]
+    },
+    placeholder: 'Write your comment here...'
+});
+
+// Function to initialize Quill for reply forms
+function initReplyQuill(container) {
+    return new Quill(container, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                ['blockquote'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }]
+            ]
+        },
+        placeholder: 'Write your reply here...'
+    });
+}
+
+// Function to submit reply
+function submitReply(button) {
+    const form = button.closest('form');
+    const spinner = button.querySelector('.spinner-border');
+    const replyQuill = Quill.find(form.querySelector('.reply-editor'));
+    
+    // Get content from Quill
+    const content = replyQuill.root.innerHTML;
+    form.querySelector('input[name="content"]').value = content;
+    
+    // Show spinner
+    button.disabled = true;
+    spinner.classList.remove('d-none');
+    
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Add reply to UI with attachment if exists
+            const replyHtml = `
+                <div class="reply mt-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${data.reply.author_name}</strong>
+                            <small class="text-muted">${data.reply.created_at}</small>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        ${data.reply.content}
+                        ${data.reply.attachment ? `
+                            <div class="mt-2">
+                                <i class="fas fa-paperclip"></i>
+                                <a href="${data.reply.attachment.url}" target="_blank">
+                                    ${data.reply.attachment.name}
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            const commentBody = form.closest('.event-body');
+            form.remove();
+            commentBody.insertAdjacentHTML('beforeend', replyHtml);
+        } else {
+            throw new Error(data.error || 'Error adding reply');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding reply: ' + error.message);
+        // Re-enable button and hide spinner
+        button.disabled = false;
+        spinner.classList.add('d-none');
+    });
+}
+
+// Update showReplyForm function
+function showReplyForm(button, eventId) {
+    // Hide any existing reply forms
+    document.querySelectorAll('.reply-form').forEach(form => {
+        form.remove();
+    });
+    
+    // Get the template
+    const template = document.getElementById('replyFormTemplate');
+    const clone = template.content.cloneNode(true);
+    
+    // Set up the form
+    const form = clone.querySelector('form');
+    form.action = `/collaboration/event/${eventId}/reply`;
+    
+    // Add form after the button's parent comment
+    const commentBody = button.closest('.event-body');
+    commentBody.appendChild(form);
+    
+    // Initialize Quill for reply
+    initReplyQuill(form.querySelector('.reply-editor'));
+}
+
+function hideReplyForm(button) {
+    const form = button.closest('.reply-form');
+    if (form) {
+        form.remove();
+    }
+}
+
+// Handle main comment form submission
+document.getElementById('commentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    
+    // Get content from Quill editor
+    const content = quill.root.innerHTML;
+    document.getElementById('hiddenContent').value = content;
+    
+    // Create FormData
+    const formData = new FormData(this);
+    
+    // Disable button and show spinner
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    
+    // Send request
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add new comment to timeline
+            const timeline = document.querySelector('.timeline');
+            const template = `
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="event-header">
+                            <div>
+                                <strong>${data.event.author_name}</strong>
+                                <small class="text-muted">${data.event.created_at}</small>
+                            </div>
+                        </div>
+                        <div class="event-body mt-2">
+                            ${data.event.content}
+                            ${data.event.attachment ? `
+                                <div class="attachment mt-2">
+                                    <i class="fas fa-paperclip"></i>
+                                    <a href="${data.event.attachment.url}" class="ms-1">
+                                        ${data.event.attachment.name}
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert at the beginning of timeline
+            timeline.insertAdjacentHTML('afterbegin', template);
+            
+            // Clear editor and file input
+            quill.setContents([]);
+            this.reset();
+            
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                Comment added successfully
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            this.insertAdjacentElement('beforebegin', alert);
+            
+            // Auto dismiss after 3 seconds
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        } else {
+            throw new Error(data.error || 'Error adding comment');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alert.innerHTML = `
+            ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        this.insertAdjacentElement('beforebegin', alert);
+    })
+    .finally(() => {
+        // Re-enable button and hide spinner
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
+    });
+});
+
+// Add this function for marking collaboration as completed
+function markAsCompleted() {
+    if (confirm('Are you sure you want to mark this collaboration as completed?')) {
+        fetch(`/collaboration/{{ collaboration.id }}/complete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                throw new Error(data.error || 'Error marking collaboration as completed');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.card-body').insertAdjacentElement('afterbegin', alert);
+        });
+    }
+}
+</script>
+
+<!-- Add this at the bottom of the file, before the closing </body> tag -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all modals
+    var modals = document.querySelectorAll('.modal');
+    modals.forEach(function(modal) {
+        new bootstrap.Modal(modal, {
+            keyboard: true,
+            backdrop: true
+        });
+    });
+
+    // Initialize all tooltips
+    var tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(function(tooltip) {
+        new bootstrap.Tooltip(tooltip);
+    });
+
+    // Initialize all popovers
+    var popovers = document.querySelectorAll('[data-bs-toggle="popover"]');
+    popovers.forEach(function(popover) {
+        new bootstrap.Popover(popover);
+    });
+});
+
+// Handle modal show/hide events
+document.querySelectorAll('.modal').forEach(function(modalElement) {
+    modalElement.addEventListener('show.bs.modal', function(event) {
+        // Any pre-show initialization
+    });
+
+    modalElement.addEventListener('shown.bs.modal', function(event) {
+        // Any post-show initialization
+    });
+
+    modalElement.addEventListener('hide.bs.modal', function(event) {
+        // Any pre-hide cleanup
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', function(event) {
+        // Any post-hide cleanup
+    });
+});
+</script>
+
+
+
+<!-- Select Representatives Modal -->
+<div class="modal fade" id="selectRepresentativesModal" tabindex="-1" aria-labelledby="selectRepresentativesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #0f203c;">
+                <h5 class="modal-title" id="selectRepresentativesModalLabel">Add Representatives</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="representativesList" class="mt-4">
+                    <!-- Will be populated via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmRepresentatives">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    Add Selected Representatives
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add this JavaScript for handling representatives -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Store collaboration ID for use in requests
+    const collaborationId = '{{ collaboration.id }}';
+    const officeId = '{{ collaboration.office_id }}';
+    
+    // Load representatives when modal is shown
+    const selectRepresentativesModal = document.getElementById('selectRepresentativesModal');
+    selectRepresentativesModal.addEventListener('show.bs.modal', function() {
+        const representativesList = document.getElementById('representativesList');
+        representativesList.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+        
+        // Fetch representatives from the same legal office
+        fetch(`/legal-office/${officeId}/representatives/json`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.length === 0) {
+                    representativesList.innerHTML = '<div class="alert alert-info">No representatives available for this office.</div>';
+                    return;
+                }
+                
+                let html = '<div class="row g-3">';
+                data.forEach(rep => {
+                    html += `
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="representative_ids[]" value="${rep.id}" 
+                                       id="rep_${rep.id}">
+                                <label class="form-check-label" for="rep_${rep.id}">
+                                    ${rep.name}
+                                    <div class="text-muted small">${rep.position || ''}</div>
+                                </label>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                representativesList.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                representativesList.innerHTML = '<div class="alert alert-danger">Error loading representatives</div>';
+            });
+    });
+    
+    // Handle form submission
+    document.getElementById('confirmRepresentatives').addEventListener('click', function() {
+        const button = this;
+        const spinner = button.querySelector('.spinner-border');
+        const selectedReps = Array.from(document.querySelectorAll('input[name="representative_ids[]"]:checked'))
+            .map(input => input.value);
+            
+        if (selectedReps.length === 0) {
+            alert('Please select at least one representative');
+            return;
+        }
+        
+        // Show spinner
+        button.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Send request to add representatives
+        fetch(`/collaboration/${collaborationId}/representatives`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                representatives: selectedReps
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();  // Reload to show updated assignments
+            } else {
+                throw new Error(data.error || 'Error adding representatives');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding representatives: ' + error.message);
+            // Re-enable button and hide spinner
+            button.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    });
+});
+</script>
+{% endblock %} 

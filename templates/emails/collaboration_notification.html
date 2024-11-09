@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .header { 
+            background: #0f203c; 
+            padding: 20px; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        .header h2 {
+            color: white;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .update-box {
+            background: #f8f9fa;
+            border-left: 4px solid #0f203c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #0f203c;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #1a3158;
+        }
+        .footer { 
+            margin-top: 30px; 
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.9em; 
+            color: #666;
+            text-align: center;
+        }
+        .meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .attachment {
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .attachment i {
+            color: #0f203c;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://www.aman.ps/assets/images/white-logo.svg" alt="Aman Logo">
+            <h2>Collaboration Update</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{ recipient.name }},</p>
+            
+            <p>There has been a new update to the collaboration: <strong>{{ collaboration.title }}</strong></p>
+            
+            <div class="update-box">
+                <div class="meta">
+                    <strong>{{ author.name }}</strong> • {{ event.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+                
+                <div>{{ event.content|safe }}</div>
+                
+                {% if event.stored_filename %}
+                <div class="attachment">
+                    <i class="fas fa-paperclip"></i>
+                    Attachment: {{ event.original_filename }}
+                </div>
+                {% endif %}
+            </div>
+            
+            <p><strong>Access Link:</strong></p>
+            <p>Click the button below or copy the full URL to access the collaboration:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ base_url }}/legal/access/{{ assignment.access_token }}?sig={{ assignment.email_signature }}" 
+                   class="button">View Collaboration</a>
+            </div>
+            
+            <p style="word-break: break-all; font-size: 0.9em; color: #666; margin-top: 10px;">
+                Full URL: {{ base_url }}/legal/access/{{ assignment.access_token }}?sig={{ assignment.email_signature }}
+            </p>
+            
+            {% if collaboration.contract %}
+            <p><strong>Related Contract:</strong> {{ collaboration.contract.name }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message from the Aman Contracts Management System.</p>
+            <p>If you didn't expect this email, please ignore it.</p>
+            <p style="font-size: 0.8em; color: #999;">
+                Sent at: {{ event.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

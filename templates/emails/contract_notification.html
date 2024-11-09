@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; margin-bottom: 20px; }
+        .contract { 
+            background: #fff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .footer { margin-top: 30px; font-size: 0.9em; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Contract Expiry Notification</h2>
+        </div>
+        
+        <p>Dear User,</p>
+        
+        <p>The following contracts are nearing their expiry dates:</p>
+        
+        {% for contract in contracts %}
+        <div class="contract">
+            <p><strong>{{ contract.name }}</strong></p>
+            <p>Party: {{ contract.party_name }}</p>
+            <p>Expiry Date: {{ contract.expiry_date }}</p>
+            <p>Days Remaining: {{ contract.days_remaining }}</p>
+            <p>Urgency: {{ contract.urgency }}</p> <!-- Display urgency level -->
+        </div>
+        {% endfor %}
+        
+        <div class="footer">
+            <p>This is an automated message from the Aman Contracts Management System.</p>
+            <p>If you didn't expect this email, please ignore it.</p>
+        </div>
+    </div>
+</body>
+</html> 

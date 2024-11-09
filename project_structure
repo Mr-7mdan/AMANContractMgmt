@@ -1,0 +1,72 @@
+aman_contracts/
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   ├── js/
+│   │   ├── main.js
+│   │   ├── collaboration.js
+│   │   └── collaboration_representatives.js
+│   └── images/
+├── templates/
+│   ├── base.html
+│   ├── base_clean.html
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── collaborations.html
+│   ├── view_collaboration.html
+│   ├── legal_access.html
+│   ├── legal_error.html
+│   ├── scheduler_test.html
+│   ├── session_timeout.html
+│   ├── _contract_collaborations.html
+│   ├── _collaboration_assignments.html
+│   ├── _collaboration_notifications.html
+│   ├── _new_collaboration_modal.html
+│   ├── _select_representatives_modal.html
+│   └── emails/
+│       ├── collaboration_request.html
+│       ├── collaboration_update.html
+│       ├── collaboration_notification.html
+│       ├── contract_notification.html
+│       ├── legal_access.html
+│       ├── new_collaboration.html
+│       └── set_password.html
+├── services/
+│   ├── __init__.py
+│   └── collaboration_notifications.py
+├── middleware/
+│   └── legal_access.py
+├── utils/
+│   ├── __init__.py
+│   ├── audit.py
+│   ├── error_handlers.py
+│   ├── notifications.py
+│   └── tokens.py
+├── deployment/
+│   ├── deploy_windows.ps1
+│   ├── web.config
+│   └── .env.template
+├── instance/
+│   └── contracts.db
+├── logs/
+│   └── .gitkeep
+├── uploads/
+│   ├── contracts/
+│   │   └── .gitkeep
+│   └── chatFiles/
+│       └── .gitkeep
+├── migrations/
+│   ├── __init__.py
+│   ├── env.py
+│   └── versions/
+├── models.py
+├── config.py
+├── email_service.py
+├── app.py
+├── requirements.txt
+├── setup.bat
+├── setup.sh
+├── cleanup.bat
+├── cleanup.sh
+├── run.bat
+└── run.sh 

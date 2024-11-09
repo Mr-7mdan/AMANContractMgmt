@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .header { 
+            background: #0f203c; 
+            padding: 20px; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header img {
+            height: 40px;
+            margin-bottom: 10px;
+        }
+        .header h2 {
+            color: white;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .details-box {
+            background: #f8f9fa;
+            border-left: 4px solid #0f203c;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #0f203c;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #1a3158;
+        }
+        .footer { 
+            margin-top: 30px; 
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.9em; 
+            color: #666;
+            text-align: center;
+        }
+        .meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .detail-item {
+            margin-bottom: 10px;
+            padding-left: 10px;
+            border-left: 2px solid #dee2e6;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #0f203c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://www.aman.ps/assets/images/white-logo.svg" alt="Aman Logo">
+            <h2>Legal Collaboration Request</h2>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{ representative.name }},</p>
+            
+            <p>You have been assigned to a new collaboration request from <strong>{{ collaboration.created_by.name }}</strong>.</p>
+            
+            <div class="details-box">
+                <div class="meta">
+                    <strong>Request Details</strong>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Title:</span>
+                    <span>{{ collaboration.title }}</span>
+                </div>
+                
+                {% if collaboration.contract %}
+                <div class="detail-item">
+                    <span class="detail-label">Related Contract:</span>
+                    <span>{{ collaboration.contract.name }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="detail-item">
+                    <span class="detail-label">Created By:</span>
+                    <span>{{ collaboration.created_by.name }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Created At:</span>
+                    <span>{{ collaboration.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <span class="detail-label">Description:</span>
+                    <div style="margin-top: 5px;">{{ collaboration.description }}</div>
+                </div>
+            </div>
+            
+            <p><strong>Access Link:</strong></p>
+            <p>Click the button below or copy the full URL to access the collaboration:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{ access_url }}" class="button">View Collaboration Request</a>
+            </div>
+            
+            <p style="word-break: break-all; font-size: 0.9em; color: #666; margin-top: 10px;">
+                Full URL: {{ access_url }}
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message from the Aman Contracts Management System.</p>
+            <p>If you didn't expect this email, please ignore it.</p>
+            <p style="font-size: 0.8em; color: #999;">
+                Sent at: {{ collaboration.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

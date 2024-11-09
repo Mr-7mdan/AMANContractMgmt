@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Add a fixed container for feedback messages -->
+<div id="feedback-container" style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1050; width: 80%; max-width: 800px;"></div>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Notification Settings</h2>
+        </div>
+    </div>
+
+    <!-- Add Recipients Configuration Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Notification Recipients</h4>
+        </div>
+        <div class="card-body">
+            <form hx-post="{{ url_for('save_recipients_settings') }}" hx-swap="none">
+                <div class="mb-3">
+                    <label class="form-label">Email Recipients</label>
+                    <input type="text" class="form-control" name="notification_emails" 
+                           value="{{ settings.notification_emails }}"
+                           placeholder="email1@aman.ps, email2@aman.ps">
+                    <small class="text-muted">Separate multiple email addresses with commas</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Recipients</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Expiry Notifications Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Expiry Notifications</h4>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" 
+                               hx-post="{{ url_for('toggle_notification', type='expiry') }}"
+                               hx-swap="none"
+                               hx-vals='js:{"checked": event.target.checked}'
+                               {% if settings.expiry_notifications_enabled == 'true' %}checked{% endif %}
+                               id="expiryNotificationsEnabled">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Configure when to send notifications for contracts nearing expiration.</p>
+                    
+                    <form hx-post="{{ url_for('save_expiry_settings') }}" hx-swap="none">
+                        <div class="mb-3">
+                            <label class="form-label">Notification Schedule</label>
+                            <div class="notification-periods">
+                                {% for period in ['One Week', 'Two Weeks', 'One Month', 'Two Months'] %}
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" 
+                                           name="notification_periods" 
+                                           value="{{ period }}"
+                                           {% if period in settings.notification_periods %}checked{% endif %}>
+                                    <label class="form-check-label">{{ period }} before expiry</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Expiry Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Periodic Reports Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Periodic Contract Reports</h4>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" 
+                               hx-post="{{ url_for('toggle_notification', type='periodic') }}"
+                               hx-swap="none"
+                               hx-vals='js:{"checked": event.target.checked}'
+                               {% if settings.periodic_notifications_enabled == 'true' %}checked{% endif %}
+                               id="periodicNotificationsEnabled">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Configure regular reports of all active contracts.</p>
+                    
+                    <form hx-post="{{ url_for('save_periodic_settings') }}" hx-swap="none">
+                        <div class="mb-3">
+                            <label class="form-label">Report Frequency</label>
+                            <select class="form-select" name="report_frequency">
+                                <option value="monthly" {% if settings.report_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                                <option value="quarterly" {% if settings.report_frequency == 'quarterly' %}selected{% endif %}>Quarterly</option>
+                                <option value="semi_annual" {% if settings.report_frequency == 'semi_annual' %}selected{% endif %}>Semi-Annual</option>
+                                <option value="annual" {% if settings.report_frequency == 'annual' %}selected{% endif %}>Annual</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Send On Day</label>
+                            <select class="form-select" name="report_day">
+                                {% for day in range(1, 29) %}
+                                <option value="{{ day }}" {% if settings.report_day|int == day %}selected{% endif %}>{{ day }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">The day of the month when the report will be sent</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Save Periodic Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Notifications Section -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4 class="mb-0">Test Notifications</h4>
+        </div>
+        <div class="card-body">
+            <div class="row justify-content-center text-center">
+                <div class="col-md-4">
+                    <button class="btn btn-outline-primary w-100" 
+                            hx-post="{{ url_for('test_expiry_notification') }}"
+                            hx-target="#testResult">
+                        Test Expiry Notification
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-outline-primary w-100"
+                            hx-post="{{ url_for('test_periodic_report') }}"
+                            hx-target="#testResult">
+                        Test Periodic Report
+                    </button>
+                </div>
+            </div>
+            <div id="testResult" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to show feedback message
+function showFeedback(message, type = 'success') {
+    const container = document.getElementById('feedback-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    container.appendChild(alert);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150); // Wait for fade out animation
+    }, 3000);
+}
+
+// Listen for HTMX after request events
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.successful) {
+        showFeedback('Settings saved successfully');
+    }
+});
+
+// Also handle flash messages if any
+document.addEventListener('DOMContentLoaded', function() {
+    const flashMessages = document.querySelectorAll('.alert');
+    flashMessages.forEach(alert => {
+        setTimeout(() => {
+            alert.classList.remove('show');
+            setTimeout(() => alert.remove(), 150);
+        }, 3000);
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">
+                {% if contract %}
+                New Collaboration for Contract: {{ contract.name }}
+                {% else %}
+                New Collaboration Lead
+                {% endif %}
+            </h3>
+        </div>
+        <div class="card-body">
+            <form id="collaborationForm" method="POST" enctype="multipart/form-data">
+                <div class="form-group mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="office_id" class="form-label">Legal Office</label>
+                    <select class="form-select" id="office_id" name="office_id" required>
+                        <option value="">Select Legal Office</option>
+                        {% for office in offices %}
+                            <option value="{{ office.id }}">{{ office.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="form-label">Legal Representatives</label>
+                    <div id="representatives_container" class="border rounded p-3">
+                        <div class="text-muted small mb-2">Select legal office to see available representatives</div>
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="attachment" class="form-label">Attachment (optional)</label>
+                    <input type="file" class="form-control" id="attachment" name="attachment">
+                    <small class="text-muted">Allowed file types: PDF, Word (DOC/DOCX), Excel (XLS/XLSX)</small>
+                </div>
+                
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        Create Collaboration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const officeSelect = document.getElementById('office_id');
+    const repsContainer = document.getElementById('representatives_container');
+    const form = document.querySelector('form');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    
+    // Load representatives when office is selected
+    officeSelect.addEventListener('change', function() {
+        const officeId = this.value;
+        if (officeId) {
+            fetch(`/legal-office/${officeId}/representatives/json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        repsContainer.innerHTML = '<div class="text-muted">No representatives available for this office</div>';
+                        return;
+                    }
+                    
+                    let html = '<div class="row g-3">';
+                    data.forEach(rep => {
+                        html += `
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="representative_ids[]" value="${rep.id}" 
+                                           id="rep_${rep.id}">
+                                    <label class="form-check-label" for="rep_${rep.id}">
+                                        ${rep.name}
+                                        <div class="text-muted small">${rep.position || ''}</div>
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    repsContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    repsContainer.innerHTML = '<div class="text-danger">Error loading representatives</div>';
+                });
+        } else {
+            repsContainer.innerHTML = '<div class="text-muted small mb-2">Select legal office to see available representatives</div>';
+        }
+    });
+    
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const checkedReps = document.querySelectorAll('input[name="representative_ids[]"]:checked');
+        if (checkedReps.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one legal representative');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+    });
+});
+</script>
+{% endblock %} 

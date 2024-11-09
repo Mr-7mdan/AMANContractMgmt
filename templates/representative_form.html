@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">{{ representative.id|default(false) and 'Edit' or 'New' }} Representative for {{ office.name }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="representativeForm">
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" 
+                           value="{{ representative.name if representative else '' }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" name="email" id="email"
+                           value="{{ representative.email if representative else '' }}" required>
+                    <small class="text-muted">This email will be used for collaboration notifications</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-control" name="phone" 
+                           value="{{ representative.phone if representative else '' }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Position</label>
+                    <input type="text" class="form-control" name="position" 
+                           value="{{ representative.position if representative else '' }}" required>
+                </div>
+
+                <!-- Create User Section -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="createUser" 
+                               name="create_user" checked>
+                        <label class="form-check-label" for="createUser">
+                            Create user account for this representative
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Username field (shown when createUser is checked) -->
+                <div class="mb-3" id="usernameField">
+                    <label class="form-label">Username</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="username" id="username">
+                        <span class="input-group-text" id="username-status">
+                            <i class="fas fa-check text-success d-none" id="username-valid"></i>
+                            <i class="fas fa-times text-danger d-none" id="username-invalid"></i>
+                        </span>
+                    </div>
+                    <div class="invalid-feedback" id="username-feedback"></div>
+                    <small class="text-muted">An email will be sent to set the password</small>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('office_representatives', office_id=office.id) }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        {{ representative.id|default(false) and 'Update' or 'Add' }} Representative
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('representativeForm');
+    const emailInput = document.getElementById('email');
+    const createUserCheckbox = document.getElementById('createUser');
+    const usernameField = document.getElementById('usernameField');
+    const usernameInput = document.getElementById('username');
+    const usernameValid = document.getElementById('username-valid');
+    const usernameInvalid = document.getElementById('username-invalid');
+    const usernameFeedback = document.getElementById('username-feedback');
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    
+    let usernameIsValid = false;
+
+    // Function to extract username from email
+    function extractUsername(email) {
+        return email.split('@')[0].toLowerCase();
+    }
+
+    // Function to check username availability
+    function checkUsername() {
+        const username = usernameInput.value.trim();
+        if (!username) return;
+        
+        fetch(`/check-username?username=${encodeURIComponent(username)}`)
+            .then(response => response.json())
+            .then(data => {
+                usernameValid.classList.toggle('d-none', !data.available);
+                usernameInvalid.classList.toggle('d-none', data.available);
+                usernameFeedback.textContent = data.available ? '' : 'This username is already taken';
+                usernameIsValid = data.available;
+                submitBtn.disabled = createUserCheckbox.checked && !usernameIsValid;
+            });
+    }
+
+    // Handle email input
+    emailInput.addEventListener('change', function() {
+        if (createUserCheckbox.checked) {
+            const suggestedUsername = extractUsername(this.value);
+            usernameInput.value = suggestedUsername;
+            checkUsername();
+        }
+    });
+
+    // Handle username input
+    usernameInput.addEventListener('input', () => {
+        usernameValid.classList.add('d-none');
+        usernameInvalid.classList.add('d-none');
+        usernameFeedback.textContent = '';
+    });
+    usernameInput.addEventListener('blur', checkUsername);
+
+    // Handle create user checkbox
+    createUserCheckbox.addEventListener('change', function() {
+        usernameField.style.display = this.checked ? 'block' : 'none';
+        if (this.checked) {
+            usernameInput.value = extractUsername(emailInput.value);
+            checkUsername();
+        } else {
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Initial setup
+    usernameField.style.display = createUserCheckbox.checked ? 'block' : 'none';
+    if (emailInput.value && createUserCheckbox.checked) {
+        usernameInput.value = extractUsername(emailInput.value);
+        checkUsername();
+    }
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        if (createUserCheckbox.checked && !usernameIsValid) {
+            e.preventDefault();
+            alert('Please choose a different username');
+            return;
+        }
+        
+        // Show spinner and disable button
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; margin-bottom: 20px; }
+        .event { 
+            background: #fff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .event.comment { border-color: #007bff; }
+        .event.file { border-color: #17a2b8; }
+        .event.status { border-color: #ffc107; }
+        .footer { margin-top: 30px; font-size: 0.9em; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Collaboration Update</h2>
+        </div>
+        
+        <p>Dear {{ recipient.name }},</p>
+        
+        <p>There has been an update to the collaboration request: <strong>{{ collaboration.title }}</strong></p>
+        
+        <div class="event {{ event.event_type }}">
+            <p><strong>{{ event.created_by.name if event.created_by else event.representative.name }}</strong> 
+               {{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            
+            {% if event.event_type == 'comment' %}
+            <div>{{ event.content|safe }}</div>
+            
+            {% elif event.event_type == 'file_upload' %}
+            <p>Uploaded a new file: {{ event.file_name }}</p>
+            
+            {% elif event.event_type == 'status_change' %}
+            <p>{{ event.content }}</p>
+            {% endif %}
+        </div>
+        
+        <p>Click below to view the collaboration:</p>
+        {% if is_representative %}
+        <p><a href="{{ url_for('legal_access', token=assignment.access_token, sig=assignment.email_signature, _external=True) }}" class="button">View Collaboration</a></p>
+        {% else %}
+        <p><a href="{{ url_for('view_collaboration', collab_id=collaboration.id, _external=True) }}">View Collaboration</a></p>
+        {% endif %}
+        
+        <div class="footer">
+            <p>This is an automated message from the Aman Contracts Management System.</p>
+            <p>If you didn't expect this email, please ignore it.</p>
+        </div>
+    </div>
+</body>
+</html> 

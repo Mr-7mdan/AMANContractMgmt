@@ -1,0 +1,103 @@
+{% extends "base_clean.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-exclamation-circle text-danger fa-4x mb-3"></i>
+            <h2>{{ title|default('Access Error') }}</h2>
+            <p class="lead">{{ message|default('Unable to access the requested collaboration.') }}</p>
+            
+            {% if error_type == 'expired' %}
+            <div class="mt-4">
+                <p class="text-muted mb-4">Please login to view this collaboration:</p>
+                
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <form id="loginForm">
+                            <input type="hidden" name="collaboration_id" value="{{ collaboration_id }}">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" name="username" placeholder="Username" required>
+                            </div>
+                            <div class="mb-3">
+                                <input type="password" class="form-control" name="password" placeholder="Password" required>
+                            </div>
+                            <div class="alert alert-danger d-none" id="loginError"></div>
+                            <button type="submit" class="btn btn-primary" id="loginSubmit">
+                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                Login
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% elif error_type == 'invalid' %}
+            <p class="text-muted">
+                If you believe this is an error, please contact the person who sent you the collaboration request.
+            </p>
+            {% endif %}
+            
+            <!-- Debug Information -->
+            {% if config.DEBUG %}
+            <div class="mt-4 text-start">
+                <hr>
+                <h6>Debug Information:</h6>
+                <pre class="bg-light p-3 rounded">
+Error Type: {{ error_type }}
+Collaboration ID: {{ collaboration_id }}
+User Authenticated: {{ current_user.is_authenticated }}
+                </pre>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('loginSubmit');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    const errorDiv = document.getElementById('loginError');
+    
+    submitBtn.disabled = true;
+    spinner.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+    
+    const formData = new FormData(this);
+    console.log('Form data:', Object.fromEntries(formData));  // Debug log
+    
+    fetch('/ajax-login', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);  // Debug log
+        if (data.success) {
+            if (data.redirect_url) {
+                console.log('Redirecting to:', data.redirect_url);
+                window.location.replace(data.redirect_url);
+            } else {
+                console.log('No redirect URL provided');
+                errorDiv.textContent = 'Error: No redirect URL provided';
+                errorDiv.classList.remove('d-none');
+            }
+        } else {
+            errorDiv.textContent = data.error || 'Invalid credentials';
+            errorDiv.classList.remove('d-none');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        errorDiv.textContent = 'Error logging in';
+        errorDiv.classList.remove('d-none');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
+    });
+});
+</script>
+{% endblock %} 

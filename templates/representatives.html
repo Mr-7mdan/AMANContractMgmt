@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Representatives for {{ office.name }}</h2>
+        <a href="{{ url_for('new_representative', office_id=office.id) }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Representative
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if office.representatives %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rep in office.representatives %}
+                        <tr>
+                            <td>{{ rep.name }}</td>
+                            <td>{{ rep.position }}</td>
+                            <td>{{ rep.email }}</td>
+                            <td>{{ rep.phone }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('edit_representative', rep_id=rep.id) }}" 
+                                       class="btn btn-warning btn-sm">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <button class="btn btn-danger btn-sm" 
+                                            onclick="deactivateRepresentative('{{ rep.id }}');">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                    <button class="btn btn-info btn-sm" 
+                                            onclick="sendPasswordEmail('{{ rep.id }}')">
+                                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                        <i class="fas fa-envelope"></i> Set Password Email
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted my-4">No representatives found for this office.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function deactivateRepresentative(repId) {
+    if (confirm('Are you sure you want to delete this representative?')) {
+        fetch(`/representative/${repId}/deactivate`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Error deleting representative');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting representative');
+        });
+    }
+}
+
+function sendPasswordEmail(repId) {
+    const button = event.target.closest('button');
+    const spinner = button.querySelector('.spinner-border');
+    
+    if (confirm('Send password setup email to this representative?')) {
+        // Disable button and show spinner
+        button.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        fetch(`/representative/${repId}/send-password-email`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Password setup email sent successfully');
+            } else {
+                alert(data.error || 'Error sending email');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error sending email');
+        })
+        .finally(() => {
+            // Re-enable button and hide spinner
+            button.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    }
+}
+</script>
+{% endblock %} 

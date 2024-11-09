@@ -1,0 +1,29 @@
+<div class="modal fade" id="pdfPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Contract Attachments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body d-flex">
+                <div class="file-list" style="width: 250px; border-right: 1px solid #dee2e6; padding-right: 15px;">
+                    <h6>Attachments</h6>
+                    <div class="list-group">
+                        {% for attachment in attachments %}
+                        <button class="list-group-item list-group-item-action"
+                                hx-get="{{ url_for('preview_pdf', attachment_id=attachment.id) }}"
+                                hx-target="#pdfViewer">
+                            {{ attachment.filename }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div id="pdfViewer" class="flex-grow-1" style="min-height: 600px; padding-left: 15px;">
+                    <div class="text-center text-muted h-100 d-flex align-items-center justify-content-center">
+                        <p>Select a file to preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

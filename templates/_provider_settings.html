@@ -1,0 +1,105 @@
+<div class="mb-3">
+    <label class="form-label">Email Address</label>
+    <input type="email" class="form-control" name="smtp_username" 
+           value="{{ settings.smtp_username }}"
+           placeholder="{{ 'your@organization.com' if provider == 'outlook' else 'your@gmail.com' if provider == 'gmail' else 'your@domain.com' }}">
+    <small id="emailHint" class="text-muted provider-hint">
+        {% if provider == 'outlook' %}
+        Your Microsoft 365 email address
+        {% elif provider == 'gmail' %}
+        Must be a Gmail address
+        {% else %}
+        Your Exchange email address
+        {% endif %}
+    </small>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Password</label>
+    <input type="password" class="form-control" name="smtp_password" 
+           placeholder="{{ 'Enter your Microsoft 365 password' if provider == 'outlook' else 'Enter your App Password' if provider == 'gmail' else 'Enter your Exchange password' }}">
+    <small id="passwordHint" class="text-muted provider-hint">
+        {% if provider == 'outlook' %}
+        Your Microsoft 365 account password or app password
+        {% elif provider == 'gmail' %}
+        Use an App Password (required for Gmail)
+        {% else %}
+        Your Exchange password or specific app password
+        {% endif %}
+    </small>
+</div>
+
+{% if provider == 'exchange' %}
+<div id="exchangeServerField" class="mb-3">
+    <label class="form-label">Exchange Server URL</label>
+    <input type="text" class="form-control" name="exchange_server" 
+           value="{{ settings.exchange_server }}"
+           placeholder="mail.yourdomain.com">
+    <small class="text-muted">Enter the Exchange Server URL without 'https://' or port number</small>
+</div>
+{% endif %}
+
+<!-- Provider-specific instructions -->
+<div class="alert alert-info mt-4">
+    {% if provider == 'outlook' %}
+    <h6>Microsoft 365 Setup Instructions:</h6>
+    <ol class="mb-0">
+        <li>Enable Modern Authentication:
+            <ul>
+                <li>Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank">Microsoft Security Info</a></li>
+                <li>Click "Add sign-in method"</li>
+                <li>Choose "App passwords" if available</li>
+            </ul>
+        </li>
+        <li>Enable SMTP AUTH:
+            <ul>
+                <li>Admin needs to enable SMTP AUTH in <a href="https://admin.microsoft.com/Adminportal/Home#/Settings/Services/:/Settings/L1/O365SmtpAuth" target="_blank">Microsoft 365 Admin Center</a></li>
+            </ul>
+        </li>
+        <li>Configure Permissions:
+            <ul>
+                <li>Ensure your account has "Send As" permissions</li>
+                <li>Contact IT admin if you need additional permissions</li>
+            </ul>
+        </li>
+    </ol>
+    {% elif provider == 'gmail' %}
+    <h6>Gmail Setup Instructions:</h6>
+    <ol class="mb-0">
+        <li>Enable 2-Step Verification:
+            <ul>
+                <li>Go to <a href="https://myaccount.google.com/security" target="_blank">Google Account Security</a></li>
+                <li>Click "2-Step Verification"</li>
+                <li>Follow the steps to enable it</li>
+            </ul>
+        </li>
+        <li>Generate App Password:
+            <ul>
+                <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank">App Passwords</a></li>
+                <li>Select app: "Mail"</li>
+                <li>Select device: "Other (Custom name)"</li>
+                <li>Enter name: "Aman Contracts"</li>
+                <li>Click "Generate"</li>
+                <li>Copy the 16-character password</li>
+            </ul>
+        </li>
+    </ol>
+    {% else %}
+    <h6>Exchange Server Setup Instructions:</h6>
+    <ol class="mb-0">
+        <li>Contact your IT administrator for:
+            <ul>
+                <li>Exchange Server URL</li>
+                <li>Your email credentials</li>
+                <li>Any specific security requirements</li>
+            </ul>
+        </li>
+        <li>Common Exchange URLs:
+            <ul>
+                <li>Office 365: outlook.office365.com</li>
+                <li>On-premises: mail.yourdomain.com</li>
+            </ul>
+        </li>
+    </ol>
+    {% endif %}
+</div> 

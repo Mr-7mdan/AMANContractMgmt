@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { 
+            background: #0f203c; 
+            padding: 20px; 
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header img { height: 40px; }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer { 
+            margin-top: 30px; 
+            font-size: 0.9em; 
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://www.aman.ps/assets/images/white-logo.svg" alt="Aman Logo">
+        </div>
+        
+        <h2>New Legal Collaboration Request</h2>
+        
+        <p>Dear {{ representative.name }},</p>
+        
+        <p>A new legal collaboration request has been created and assigned to you.</p>
+        
+        <p><strong>Details:</strong></p>
+        <ul>
+            <li>Title: {{ collaboration.title }}</li>
+            <li>Type: {{ 'Contract Review' if collaboration.contract else 'Legal Lead' }}</li>
+            {% if collaboration.contract %}
+            <li>Contract: {{ collaboration.contract.name }}</li>
+            {% endif %}
+            <li>Created by: {{ collaboration.created_by.name }}</li>
+        </ul>
+        
+        <p>Please click the button below to view and respond to this request:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ url_for('legal_access', token=access_token, sig=signature, _external=True) }}" class="button">View Collaboration</a>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message from Aman Contracts Management System.</p>
+        </div>
+    </div>
+</body>
+</html> 

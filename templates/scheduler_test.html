@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">Scheduler Test</h3>
+        </div>
+        <div class="card-body">
+            <!-- Scheduler Status -->
+            <div class="mb-4">
+                <h4>Scheduler Status</h4>
+                <p>
+                    Status: 
+                    <span class="badge bg-{{ 'success' if scheduler_info.status else 'danger' }}">
+                        {{ 'Running' if scheduler_info.status else 'Stopped' }}
+                    </span>
+                </p>
+            </div>
+
+            <!-- Scheduled Jobs -->
+            <div class="mb-4">
+                <h4>Scheduled Jobs</h4>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th>Next Run</th>
+                                <th>Schedule</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in scheduler_info.jobs %}
+                            <tr>
+                                <td>{{ job.name }}</td>
+                                <td>{{ job.next_run }}</td>
+                                <td>
+                                    {% if 'cron' in job.trigger %}
+                                        {% if 'day' in job.trigger %}
+                                            Monthly on day 1 at 09:00
+                                        {% else %}
+                                            Daily at 09:00
+                                        {% endif %}
+                                    {% else %}
+                                        {{ job.trigger }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if job.active else 'warning' }}">
+                                        {{ 'Active' if job.active else 'Paused' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-primary btn-sm" 
+                                            onclick="testJob('{{ job.id }}')"
+                                            {{ 'disabled' if not scheduler_info.status }}>
+                                        Run Now
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div class="mb-4">
+                <h4>Test Results</h4>
+                <div id="testResults" class="border rounded p-3 bg-light">
+                    <p class="text-muted mb-0">Test results will appear here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testJob(jobId) {
+    const resultsDiv = document.getElementById('testResults');
+    resultsDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+    
+    let jobType;
+    if (jobId === 'Contract Expiry Check') {
+        jobType = 'expiry_check';
+    } else if (jobId === 'Periodic Contract Report') {
+        jobType = 'periodic_report';
+    } else {
+        jobType = jobId;
+    }
+    
+    console.log(`Testing job: ${jobType}`);
+    
+    fetch(`/scheduler/test?type=${encodeURIComponent(jobType)}`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.error('Error response:', text);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${data.message}
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> ${data.message}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultsDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> Error running test: ${error.message}
+            </div>
+        `;
+    });
+}
+</script>
+{% endblock %} 

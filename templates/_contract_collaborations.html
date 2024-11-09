@@ -1,0 +1,77 @@
+<div class="card mb-4">
+    <div class="card-body">
+        {% if contract.collaborations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Legal Office</th>
+                        <th>Created</th>
+                        <th>Last Update</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for collab in contract.collaborations %}
+                    <tr>
+                        <td>{{ collab.title }}</td>
+                        <td>{{ collab.office.name }}</td>
+                        <td>{{ collab.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ collab.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if collab.status == 'open' %}
+                            <span class="badge bg-warning">Open</span>
+                            {% elif collab.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% else %}
+                            <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ url_for('view_collaboration', collab_id=collab.id) }}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if collab.status == 'open' %}
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="cancelCollaboration('{{ collab.id }}')">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted my-4">No collaborations for this contract yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function cancelCollaboration(id) {
+    if (confirm('Are you sure you want to cancel this collaboration?')) {
+        fetch(`/collaboration/${id}/cancel`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error cancelling collaboration');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error cancelling collaboration');
+        });
+    }
+}
+</script> 

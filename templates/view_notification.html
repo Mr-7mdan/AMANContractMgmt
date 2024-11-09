@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0">Notification Details</h4>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Date:</div>
+                <div class="col-md-9">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Contract:</div>
+                <div class="col-md-9">{{ notification.contract.name if notification.contract else 'System' }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Type:</div>
+                <div class="col-md-9">
+                    {% if notification.notification_type == 'periodic_report' %}
+                        Periodic Report
+                    {% elif notification.notification_type == 'expiry' %}
+                        Expiry Notice
+                    {% else %}
+                        {{ notification.notification_type|title }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Status:</div>
+                <div class="col-md-9">
+                    <span class="badge {{ 'bg-success' if notification.status == 'sent' else 'bg-danger' }}">
+                        {% if notification.status == 'sent' %}
+                            Success
+                        {% else %}
+                            Failed
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Recipients:</div>
+                <div class="col-md-9">
+                    {% if notification.recipients %}
+                        {% set recipients = notification.recipients|from_json %}
+                        {{ recipients|join(', ') if recipients is iterable and recipients is not string else recipients }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Subject:</div>
+                <div class="col-md-9">{{ notification.subject }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 fw-bold">Message:</div>
+                <div class="col-md-9">{{ notification.message|safe }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

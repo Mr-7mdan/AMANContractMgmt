@@ -1,0 +1,155 @@
+:root {
+    --bs-primary: #0f203c;
+    --bs-primary-rgb: 15, 32, 60;
+    --app-bg: #f5f6f8;  /* Light grey background */
+    --element-bg: #ffffff;  /* White background for elements */
+}
+
+body {
+    background-color: var(--app-bg);
+}
+
+/* Make cards and other main elements white */
+.card {
+    background-color: var(--element-bg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: none;
+}
+
+.info-group {
+    background-color: var(--element-bg);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+/* Rest of your existing styles */
+.btn-primary {
+    background-color: #0f203c;
+    border-color: #0f203c;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: #1a3156 !important;
+    border-color: #1a3156 !important;
+}
+
+.btn-outline-primary {
+    color: #0f203c;
+    border-color: #0f203c;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+    background-color: #0f203c !important;
+    border-color: #0f203c !important;
+}
+
+.text-primary {
+    color: #0f203c !important;
+}
+
+.bg-primary {
+    background-color: #0f203c !important;
+}
+
+.nav-link:hover {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.card-header {
+    background-color: #0f203c;
+    color: white;
+}
+
+/* Override Bootstrap's default focus color */
+.form-control:focus,
+.form-select:focus {
+    border-color: #0f203c;
+    box-shadow: 0 0 0 0.25rem rgba(15, 32, 60, 0.25);
+}
+
+/* Custom styles for links */
+a {
+    color: #0f203c;
+}
+
+a:hover {
+    color: #1a3156;
+}
+
+/* Custom badge colors */
+.badge.bg-success {
+    background-color: #198754 !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.badge.bg-info {
+    background-color: #0f203c !important;
+}
+
+/* Table hover effect with white background */
+.table > tbody > tr:hover {
+    background-color: rgba(27, 117, 187, 0.05);
+}
+
+/* Modal styling */
+.modal-content {
+    background-color: var(--element-bg);
+}
+
+.modal-header {
+    background-color: var(--bs-primary);
+    color: white;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+/* Profile dropdown styling */
+.navbar .dropdown .btn-link {
+    text-decoration: none;
+}
+
+.navbar .dropdown .btn-link:hover {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.navbar .dropdown .btn-link i {
+    color: white;
+}
+
+.navbar .dropdown .btn-link span {
+    color: white;
+}
+
+/* Form elements */
+.form-control, .form-select {
+    background-color: var(--element-bg);
+}
+
+/* Table styling */
+.table {
+    background-color: var(--element-bg);
+}
+
+/* Alert styling */
+.alert {
+    background-color: var(--element-bg);
+}
+
+/* Container spacing */
+.container {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}

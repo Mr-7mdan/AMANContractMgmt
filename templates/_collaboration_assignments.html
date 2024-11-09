@@ -1,0 +1,141 @@
+{% if collaboration.assignments %}
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Position</th>
+                <th>Legal Office</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for assignment in collaboration.assignments %}
+            <tr>
+                <td>{{ assignment.representative.name }}</td>
+                <td>{{ assignment.representative.position }}</td>
+                <td>{{ assignment.representative.office.name }}</td>
+                <td>
+                    {% if assignment.is_completed %}
+                    <span class="badge bg-success">Completed</span>
+                    {% else %}
+                    <span class="badge bg-warning">Pending</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not assignment.is_completed %}
+                    <button class="btn btn-info btn-sm" 
+                            onclick="resendInvitation('{{ assignment.id }}')"
+                            id="resendBtn-{{ assignment.id }}">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        <i class="fas fa-envelope"></i> Resend Email
+                    </button>
+                    <button class="btn btn-warning btn-sm" 
+                            onclick="revokeAccess('{{ assignment.id }}')">
+                        <i class="fas fa-ban"></i> Revoke Access
+                    </button>
+                    <button class="btn btn-danger btn-sm" 
+                            onclick="removeAssignment('{{ assignment.id }}')">
+                        <i class="fas fa-user-minus"></i> Remove
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted text-center my-3">No representatives assigned yet.</p>
+{% endif %}
+
+<script>
+function resendInvitation(assignmentId) {
+    const button = document.getElementById(`resendBtn-${assignmentId}`);
+    const spinner = button.querySelector('.spinner-border');
+    
+    // Disable button and show spinner
+    button.disabled = true;
+    spinner.classList.remove('d-none');
+    
+    fetch(`/collaboration/assignment/${assignmentId}/resend`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            alert.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            button.closest('.table-responsive').insertAdjacentElement('beforebegin', alert);
+            
+            // Auto dismiss after 3 seconds
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        } else {
+            throw new Error(data.error || 'Error resending invitation');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Show error message
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show mt-3';
+        alert.innerHTML = `
+            Error resending invitation: ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        button.closest('.table-responsive').insertAdjacentElement('beforebegin', alert);
+    })
+    .finally(() => {
+        // Re-enable button and hide spinner
+        button.disabled = false;
+        spinner.classList.add('d-none');
+    });
+}
+
+function removeAssignment(assignmentId) {
+    if (confirm('Are you sure you want to remove this representative?')) {
+        fetch(`/collaboration/assignment/${assignmentId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Error removing representative');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error removing representative');
+        });
+    }
+}
+
+function revokeAccess(assignmentId) {
+    if (confirm('Are you sure you want to revoke access? This will invalidate the current access token.')) {
+        fetch(`/collaboration/assignment/${assignmentId}/revoke`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Access token revoked successfully');
+            } else {
+                alert('Error revoking access token');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error revoking access token');
+        });
+    }
+}
+</script> 

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #0f203c;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .header img {
+            height: 40px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #0f203c;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .urgency {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .urgency.high {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+        .urgency.medium {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+        .urgency.low {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #0f203c;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://www.aman.ps/assets/images/white-logo.svg" alt="Aman Logo">
+    </div>
+
+    <div class="content">
+        <h2>{{ frequency }} Contract Status Report</h2>
+        <p>Here is the current status of all active contracts in the system:</p>
+
+        <div class="summary">
+            <strong>Summary:</strong><br>
+            Total Active Contracts: {{ contracts|length }}<br>
+            Critical (≤ 7 days): {{ contracts|selectattr('days_remaining', '<=', 7)|list|length }}<br>
+            Warning (8-30 days): {{ contracts|selectattr('days_remaining', '>', 7)|selectattr('days_remaining', '<=', 30)|list|length }}<br>
+            Good (> 30 days): {{ contracts|selectattr('days_remaining', '>', 30)|list|length }}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract Name</th>
+                    <th>Party</th>
+                    <th>Expiry Date</th>
+                    <th>Days Remaining</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in contracts|sort(attribute='days_remaining') %}
+                <tr>
+                    <td>{{ contract.name }}</td>
+                    <td>{{ contract.party_name }}</td>
+                    <td>{{ contract.expiry_date }}</td>
+                    <td>{{ contract.days_remaining }} days</td>
+                    <td>
+                        <span class="urgency {{ 'high' if contract.days_remaining <= 7 else 'medium' if contract.days_remaining <= 30 else 'low' }}">
+                            {{ contract.urgency }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="note">
+            <strong>Status Indicators:</strong><br>
+            🔴 High Priority: 7 days or less remaining<br>
+            🟡 Medium Priority: 8-30 days remaining<br>
+            🟢 Low Priority: More than 30 days remaining
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated {{ frequency.lower() }} report from the Aman Contracts Management System.</p>
+        <p>© {{ now.year }} Aman. All rights reserved.</p>
+    </div>
+</body>
+</html> 

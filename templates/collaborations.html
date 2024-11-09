@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Collaboration Requests</h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newCollaborationModal">
+            <i class="fas fa-plus"></i> New Collaboration
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All</option>
+                        <option value="open" {% if request.args.get('status') == 'open' %}selected{% endif %}>Open</option>
+                        <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Legal Office</label>
+                    <select class="form-select" name="office_id">
+                        <option value="">All</option>
+                        {% for office in legal_offices %}
+                        <option value="{{ office.id }}" {% if request.args.get('office_id')|int == office.id %}selected{% endif %}>
+                            {{ office.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" name="type">
+                        <option value="">All</option>
+                        <option value="contract" {% if request.args.get('type') == 'contract' %}selected{% endif %}>Contract</option>
+                        <option value="lead" {% if request.args.get('type') == 'lead' %}selected{% endif %}>Lead</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="{{ url_for('collaborations') }}" class="btn btn-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Collaborations List -->
+    <div class="card">
+        <div class="card-body">
+            {% if collaborations.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Title</th>
+                            <th>Created By</th>
+                            <th>Legal Office</th>
+                            <th>Created</th>
+                            <th>Last Update</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for collab in collaborations.items %}
+                        <tr>
+                            <td>
+                                {% if collab.contract %}
+                                <span class="badge bg-info px-3">Contract</span>
+                                {% else %}
+                                <span class="badge bg-secondary px-3">Lead</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ collab.title }}</td>
+                            <td>{{ collab.created_by.name }}</td>
+                            <td>{{ collab.office.name }}</td>
+                            <td>{{ collab.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ collab.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'warning' if collab.status == 'open' else 'success' if collab.status == 'completed' else 'danger' }} px-3">
+                                    {{ collab.status|title }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('view_collaboration', collab_id=collab.id) }}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if collab.status == 'open' %}
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="cancelCollaboration('{{ collab.id }}')">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination - Only show if there's more than one page -->
+            {% if collaborations.pages > 1 %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if collaborations.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('collaborations', page=collaborations.prev_num, **request.args) }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for page_num in collaborations.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == collaborations.page else '' }}">
+                                <a class="page-link" href="{{ url_for('collaborations', page=page_num, **request.args) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if collaborations.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('collaborations', page=collaborations.next_num, **request.args) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <p class="text-center text-muted my-4">No collaboration requests found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Include the New Collaboration Modal -->
+{% include '_new_collaboration_modal.html' %}
+
+<script>
+function cancelCollaboration(id) {
+    if (confirm('Are you sure you want to cancel this collaboration?')) {
+        fetch(`/collaboration/${id}/cancel`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error cancelling collaboration');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error cancelling collaboration');
+        });
+    }
+}
+
+// Auto-submit form when filters change
+document.querySelectorAll('#filterForm select').forEach(select => {
+    select.addEventListener('change', () => {
+        document.getElementById('filterForm').submit();
+    });
+});
+</script>
+
+<style>
+/* Consistent badge sizing */
+.badge {
+    font-size: 0.875rem;
+    padding: 0.5em 1em;
+    min-width: 90px;
+    text-align: center;
+}
+
+/* Consistent button heights */
+.btn {
+    height: 35px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Consistent table styling */
+.table th {
+    font-size: 0.875rem;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.table td {
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+/* Right align action buttons */
+.text-end {
+    text-align: right !important;
+}
+
+/* Add gap between buttons */
+.text-end .btn + .btn {
+    margin-left: 0.5rem;
+}
+</style>
+{% endblock %} 
